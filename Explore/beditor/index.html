@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>beditor</title>
+    <style>
+        #beditor{
+            margin: 20px;
+        }
+        #tools_bar{
+            padding: 2px;
+        }
+        .bepgbtn{
+            margin-right: 20px;
+            text-decoration: none;
+            color: #2b2b2b;
+        }
+        #test{
+            border: 1px solid #cfcfcf;
+            padding: 5px;
+            min-height: 100px;
+            width: 400px;
+        }
+    </style>
+</head>
+<body>
+    <div id="beditor">
+        <div id="tools_bar" be-type="tools">
+            <a class="bepgbtn" href="javascript:void(0)" data-bepg="txt/align" data-bedata="dir=left">左对齐</a>
+            <a class="bepgbtn" href="javascript:void(0)" data-bepg="txt/align" data-bedata="dir=center">居中</a>
+            <a class="bepgbtn" href="javascript:void(0)" data-bepg="txt/align" data-bedata="dir=right">右对齐</a>
+            <a class="bepgbtn" href="javascript:void(0)" data-bepg="txt/font" data-bedata="type=bold">B</a>
+            <a class="bepgbtn" href="javascript:void(0)" data-bepg="txt/font" data-bedata="type=italic">I</a>
+            <a class="bepgbtn" href="javascript:void(0)" data-bepg="txt/font" data-bedata="type=underline">U</a>
+            <a class="bepgbtn" href="javascript:void(0);"><input type="color" /></a>
+        </div>
+        <div id="test" be-type="editor">
+            <i><b>abc</b>def</i>gh<span>ijk</span>
+        </div>
+    </div>
+    <script data-main="main" type="text/javascript" src="src/require.js"></script>
+</body>
+</html>
