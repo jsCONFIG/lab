@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>biconnect</title>
+    <style>
+        html,*{
+            position: relative;
+            margin: 0 auto;
+            padding: 0;
+        }
+        .leftB{
+            float: left;
+            width: 10%;
+        }
+        .rightB{
+            float: right;
+            width: 80%;
+            border: 1px solid #cfcfcf;
+        }
+        .wrapper:after{
+            content: '';
+            clear: both;
+            display: block;
+        }
+        .iframe{
+            width: 100%;
+        }
+    </style>
+</head>
+<body>
+    <div class="wrapper">
+        <div class="leftB">
+            <p>Main</p>
+            <button id="send">send</button>
+        </div>
+        <div class="rightB">
+            <iframe name='test' id="iN" src="http://b.com/iframe.html" class="iframe" frameborder="0"></iframe>
+        </div>
+    </div>
+    <script type="text/javascript" src="src/biconnect.js"></script>
+    <script>
+        console.log( location.hash );
+        var el = document.getElementById( 'send' );
+        var iObj = $biconnect.create( document.getElementById( 'iN' ) );
+        iObj.on('channel_child', 'msg', function (){console.log('parent say: recived ', arguments)});
+        el.onclick = function () {
+            iObj.dispatch( 'channel_parent', 'msg', {'from': 'parent'} )
+        };
+    </script>
+</body>
+</html>

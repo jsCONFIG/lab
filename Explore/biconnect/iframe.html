@@ -1,0 +1,21 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>iframe</title>
+</head>
+<body>
+    <p>This is an iframe.</p>
+    <button id="send">send</button>
+    <script type="text/javascript" src="src/biconnect.js"></script>
+    <script>
+        var iObj = $biconnect.create();
+        var el = document.getElementById( 'send' );
+        iObj.on('channel_parent', 'msg', function (){console.log('iframe say: recived ',arguments)});
+        el.onclick = function () {
+            iObj.dispatch( 'channel_child', 'msg', {'from':'iframe'} );
+            console.log( window.location.href );
+        };
+    </script>
+</body>
+</html>
