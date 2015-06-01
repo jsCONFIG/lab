@@ -1,0 +1,151 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>浏览器跨域通信</title>
+    <style type="text/css">
+        .code{
+            color: #3399cc;
+            background-color: #fcfcfc;
+            border: 1px solid #cecece;
+            padding: 5px 10px;
+            font-size: 12px;
+            line-height: 1.2em;
+            margin: 5px;
+        }
+        .descript{
+            color: #333333;
+            line-height: 1.2em;
+            margin-left: 5px;
+        }
+        .title{
+            font-size: 14px;
+            color: #333333;
+            margin: 10px 2px;
+            font-weight: bold;
+        }
+        .code li{
+            list-style-type: decimal;
+            padding: 2px;
+        }
+        .item{
+            margin-bottom: 10px;
+            border-bottom: 1px dashed #cecece;
+        }
+        .return,.param{
+            color: #3399cc;
+            margin: 5px;
+            font-size: 12px;
+        }
+        .return span,.param span{
+            color: #333333;
+        }
+    </style>
+</head>
+<body>
+    <div class="code" style="border-color: #aa2222;">
+        示例使用方法：<br>
+        搭建服务器环境，将DocumentRoot指向当前目录<br>
+        设置host: 127.0.0.1 a.com b.com
+        通过 a.com/index.html 访问本页面
+    </div>
+    <div class="item">
+        <div class="title">
+            1、$bcross.postMessage
+        </div>
+        <div class="descript">
+            H5提供的postMessage方法，所以兼容性你懂的
+        </div>
+        <div class="param">
+            <span>@param </span>inIframe-是否在iframe页面中 ifN-不在iframe内时的iframe节点
+        </div>
+        <div class="return">
+            <span>@return </span>Object
+        </div>
+        <div class="code">
+            <ul>
+                <li>var crossObj = $bcross.postMessage(false, iframeN);</li>
+                <li>crossObj.send('test', urlStr);</li>
+                <li>crossObj.receive(function (e) {console.log(e);})</li>
+            </ul>
+        </div>
+        <div class="code">
+            <iframe src="http://b.com/postMsg.php" id="postIframe"></iframe>
+            <a href="javascript:void(0);" id="postMsg">发送到http://b.com/postMsg.php</a>
+        </div>
+    </div>
+    <div class="item">
+        <div class="title">
+            2、$bcross.jsonp
+        </div>
+        <div class="descript">
+            jsonp方式
+        </div>
+        <div class="param">
+            <span>@param </span>src-跨域地址 data-跨域数据 cbk-回调方法
+        </div>
+        <div class="code">
+            <ul>
+                <li>var cbk = function (json) {console.log(json)};</li>
+                <li>$bcross.jsonp('http://b.com/jsonp.php', {'data' :'test'}, cbk);</li>
+            </ul>
+        </div>
+        <div class="code">
+            <a href="javascript:void(0);" id="jsonp">发送到http://b.com/jsonp.php</a>
+        </div>
+    </div>
+    <div class="item">
+        <div class="title">
+            3、$bcross.form
+        </div>
+        <div class="descript">
+            表单配合name的aba方式
+        </div>
+        <div class="param">
+            <span>@param </span>conf-配置参数
+        </div>
+        <div class="code">
+            <ul>
+                <li>var fObj = $bcross.form();</li>
+                <li>fObj.send( data, {'url' : 'http://b.com/bcross.php', cbk : function (json){}});</li>
+            </ul>
+        </div>
+        <div class="code">
+            <a href="javascript:void(0);" id="form">发送到http://b.com/bcross.php</a>
+        </div>
+    </div>
+    <script type="text/javascript" src="bcross-1.0.0.js"></script>
+    <script type="text/javascript">
+        // postMessage
+        var postObj = $bcross.postMsg( false, document.getElementById('postIframe') );
+        document.getElementById('postMsg').onclick = function () {
+            postObj.send('"msg from index.html"', 'http://b.com/postMsg.php')
+        };
+        postObj.receive(function (e){
+            alert('index.html say: data is ' + e.data );
+        });
+
+        // jsonp
+        document.getElementById('jsonp').onclick = function () {
+            $bcross.jsonp('http://b.com/jsonp.php', {'data' : 'test'}, function ( json ) {
+                alert('返回数据码为：' + json.code + '\n' + 'data为：' + json.data );
+            });
+        };
+
+        // form
+        var formObj = $bcross.form({
+            'back_url' : 'http://a.com/my_bcross.php'
+        });
+        document.getElementById('form').onclick = function () {
+            formObj.send({ 'data' : 'test' },
+            {
+                'url' : 'http://b.com/bcross.php',
+                'cbk' : function ( json ) {
+                    alert( 'From a.com say: receive data code is "' + json.code + '"' );
+                }
+            }
+            );
+        };
+    </script>
+</body>
+</html>
