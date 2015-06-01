@@ -1,0 +1,31 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>easyani</title>
+    <style>
+        #stage{
+            position: relative;
+            margin: 30px auto;
+            border: 1px solid #cfcfcf;
+        }
+        .btn-group{
+            width: 800px;
+            margin: 0 auto;
+        }
+
+        .btn{
+            margin-left: 40px;
+        }
+
+    </style>
+</head>
+<body>
+    <canvas width="800" height="600" id="stage"></canvas>
+    <div class="btn-group">
+        <button class="btn" id="play">Play</button>
+        <button class="btn" id="pause">Pause</button>
+    </div>
+    <script type="text/javascript" src="require.js" data-main="./build"></script>
+</body>
+</html>

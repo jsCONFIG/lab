@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>ani build</title>
+    <style>
+        html, *{
+            position: relative;
+            margin: 0;
+            padding: 0;
+        }
+        .wrapper{
+            
+        }
+        .content{
+            width: 800px;
+            margin: 30px auto;
+        }
+        #stage{
+            position: relative;
+            border: 1px solid #cfcfcf;
+        }
+        .btn-group{
+            width: 800px;
+            margin: 0 auto;
+        }
+
+        .btn{
+            margin-left: 40px;
+        }
+
+    </style>
+</head>
+<body>
+    <div class="wrapper">
+        <div class="content">
+            <canvas width="800" height="600" id="stage"></canvas>
+        </div>
+    </div>
+    <script type="text/javascript" src="require.js" data-main="./build"></script>
+</body>
+</html>

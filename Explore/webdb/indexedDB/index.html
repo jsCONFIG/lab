@@ -1,0 +1,21 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>indexedDB</title>
+</head>
+<body>
+    <script type="text/javascript" src="dbtools.js"></script>
+    
+    <script type="text/javascript">
+        var dObj = new dbt;
+        dObj.open('liuping', {
+            tbName: 'myTable',
+            primaryKey: 'name',
+            conf: {
+                indexList: {name: 'myage', keypath: 'age'}
+            }
+        });
+    </script>
+</body>
+</html>
