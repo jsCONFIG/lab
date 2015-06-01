@@ -1,0 +1,126 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en">
+<head>
+	<meta http-equiv="Content-Type" content="text/html;charset=UTF-8">
+	<title>CJS 1.0.1</title>
+	<style type="text/css">
+		*{
+			padding: 0;
+			margin: 0;
+		}
+		#wrapper{
+			width: 100px;
+			margin: 20px;
+			height: 100px;
+			overflow: hidden;
+			border: 1px solid #cfcfcf;
+		}
+		#content{
+			width: 1000px;
+			height: 100px;
+		}
+		.item{
+			list-style: none;
+			float: left;
+			width: 100px;
+			height: 100px;
+		}
+		.clear{
+			clear: both;
+		}
+		.content{
+			display: none;
+		}
+		.active{
+			display: block;
+		}
+		.tab{
+			float: left;
+			padding: 10px;
+			list-style: none;
+			cursor: pointer;
+		}
+		#Tab{
+			margin: 10px;
+		}
+		#box{
+			width: 100px;
+			height: 100px;
+			margin: 10px;
+			border: 1px solid #000;
+			background-color: #3399cc;
+			filter: progid:DXImageTransform.Microsoft.Shadow(color='#969696', Direction=135, Strength=5);
+			zoom:1;
+		}
+	</style>
+</head>
+<body style="height:2000px;">
+	<div id="box">
+		testBox
+	</div>
+	<div id="wrapper">
+		<div id="content">
+			<ul>
+				<li class="item">1</li>
+				<li class="item">2</li>
+				<li class="item">3</li>
+				<li class="item">4</li>
+				<li class="item">5</li>
+			</ul>
+			<div class="clear"> </div>
+		</div>
+	</div>
+	<button id="start">GO</button>
+	<div id="Tab">
+		<ul>
+			<li class="tab" node-type="tab" action-type="tabKey">1</li>
+			<li class="tab" node-type="tab" action-type="tabKey">2</li>
+			<li class="tab" node-type="tab" action-type="tabKey">3</li>
+		</ul>
+		<div class="clear"> </div>
+		<div>
+			<div node-type="content" class="content active">1</div>
+			<div node-type="content" class="content">2</div>
+			<div node-type="content" class="content">3</div>
+		</div>
+	</div>
+	<div id="browser"></div>
+	<div style="margin-bottom:800px;">
+		<canvas width="200" height="100"></canvas>
+	</div>
+	<div id="lazyContent">
+		<a href="#">lazyload</a>
+	</div>
+	<script type="text/javascript" src="cjs-1.0.0.js" ></script>
+	<script type="text/javascript">
+		var $ = CJS;
+		var action = function () {
+			var node = $.logic.dom.get('#wrapper');
+			var queue = $.logic.ani.queue( [
+					{
+						'node': node,
+						'style': {'opacity': '0'},
+						'time': 2000
+					}
+				], function (){
+				node.innerHTML = 'OK';
+			});
+			queue.start();
+			// $.logic.css.base( node, {'opacity':'0'} );
+		};
+		var btn = $.logic.dom.get( '#start' );
+		$.logic.evt.event.addEvt( btn, 'click', action );
+		var b = $.logic.nav.browser;
+		var list = [ 'IE', 'Chrome', 'Firefox', 'Safari', 'Opera' ];
+		var name,v;
+		for ( var i in list ) {
+			if( b[list[i]] ) {
+				name = list[i];
+				v = b[name];
+			} 
+		}
+		$.logic.dom.get('#browser').innerHTML = '<li>您的浏览器是：'+ name+'<li>'+
+			'<li>您的浏览器版本是：'+v+'<li>';
+	</script>
+</body>
+</html>
