@@ -1,8 +1,7 @@
 /**
  * ui组件基类
  */
-var $ = require('fe:widget/js/base/jquery.js');
-var $T = require('shuqi:resource/js/common/expand.js');
+var $T = require('./expand.js');
     
 // 对齐数组，支持左上，右上，左下，右下，中上，中下, 中间
 var alignArr = ['lt', 'rt', 'lb', 'rb', 'ct', 'cb', 'cm'];

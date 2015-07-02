@@ -1,8 +1,7 @@
 /**
  * alert组件
  */
-var $ = require('fe:widget/js/base/jquery.js');
-var $T = require('shuqi:resource/js/common/expand.js');
+var $T = require('./expand.js');
 var icons = require('./icons.js');
 var ulayer = require('./layer.js');
 

@@ -1,4 +1,3 @@
-var $ = require('fe:widget/js/base/jquery.js');
 var TEMP = '<div id="ui-mask"></div>';
 
 var mask;

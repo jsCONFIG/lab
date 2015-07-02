@@ -1,4 +1,3 @@
-var $ = require('fe:widget/js/base/jquery.js');
 var autolayer = require('./autolayer.js');
 
 module.exports = function ( msg, conf ) {

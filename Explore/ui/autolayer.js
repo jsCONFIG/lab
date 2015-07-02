@@ -1,8 +1,7 @@
 /**
  * 自动隐藏的layer层
  */
-var $ = require('fe:widget/js/base/jquery.js');
-var $T = require('shuqi:resource/js/common/expand.js');
+var $T = require('./expand.js');
 var layer = require('./layer.js');
 var mask = require('./mask.js');
 var UNIKEY = '_ui_autolayer_uni';
