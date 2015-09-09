@@ -1,0 +1,25 @@
+{
+  "name": "react",
+  "version": "0.0.1",
+  "description": "For starry.",
+  "main": "gulpfile.js",
+  "scripts": {
+    "start": "gulp",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "author": "clpliuping@126.com",
+  "license": "ISC",
+  "devDependencies": {
+    "gulp": "^3.9.0",
+    "browserify": "^10.2.4",
+    "reactify": "^1.1.1",
+    "vinyl-source-stream": "^1.1.0",
+    "gulp-concat": "latest",
+    "watchify": "latest",
+    "vinyl-buffer": "latest",
+    "gulp-util": "latest",
+    "gulp-sourcemaps": "latest",
+    "lodash.assign": "latest",
+    "babelify": "^6.1.2"
+  }
+}
