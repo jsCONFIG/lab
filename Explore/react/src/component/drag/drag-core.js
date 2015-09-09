@@ -3,6 +3,7 @@ import dragStore from '../../store/drag';
 import DragBase from './drag-base';
 import DragPlaceholder from './drag-placeholder';
 import merge from '../../utils/merge';
+import collisionDetection from '../../utils/collision-detection';
 
 const defaultDragParam = {
     minSize: [100, 100],
@@ -21,6 +22,9 @@ class DragCore extends React.Component {
 
         this.freshData = this.freshData.bind(this);
         this.onDragUpdate = this.onDragUpdate.bind(this);
+        this.beforeUpdate = this.beforeUpdate.bind(this);
+
+        this.collision = new collisionDetection();
     }
 
     componentDidMount () {
@@ -38,8 +42,21 @@ class DragCore extends React.Component {
     }
 
     // 用于判断碰撞
-    onDragUpdate (act, dragId, style) {
-        
+    onDragUpdate (status, dragId, style) {
+        let myRange = {
+            id: dragId,
+            x: [style.left, style.left + style.width],
+            y: [style.top, style.top + style.height]
+        };
+
+        this.collision.updateMap(dragId, myRange);
+
+        let flag = this.collision.judge(myRange);
+        console.log(flag);
+    }
+
+    beforeUpdate (status, dragId, style) {
+        this.collision.setMain(dragId);
     }
 
     freshData () {
@@ -65,8 +82,23 @@ class DragCore extends React.Component {
             let defaultParam = merge({}, defaultDragParam);
             dragParam = merge(defaultParam, dragParam);
 
+            let dragStyle = dragParam.style;
+
+            // 碰撞检测初始化
+            dragStyle && this.collision.addMap({
+                id: dragParam.id,
+                x: [dragStyle.left, dragStyle.left + dragStyle.width],
+                y: [dragStyle.top, dragStyle.top + dragStyle.height]
+            });
+
             drags.push(
-                <DragBase key={i} param={dragParam} id={dragParam.id} gid={dragParam.gid} onUpdate={this.onDragUpdate}/>
+                <DragBase
+                    key = {i}
+                    param = {dragParam}
+                    id = {dragParam.id}
+                    gid = {dragParam.gid}
+                    beforeUpdate = {this.beforeUpdate}
+                    onUpdate = {this.onDragUpdate} />
             );
 
         }

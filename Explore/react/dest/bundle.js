@@ -116,9 +116,19 @@ var DragBase = (function (_React$Component) {
         this.onResizeStart = this.onResizeStart.bind(this);
         this.onResizing = this.onResizing.bind(this);
         this.onResizeEnd = this.onResizeEnd.bind(this);
+
+        this.beforeUpdate = this.beforeUpdate.bind(this);
     }
 
     _createClass(DragBase, [{
+        key: 'beforeUpdate',
+        value: function beforeUpdate() {
+            var state = this.state;
+            var props = this.props;
+
+            props.beforeUpdate(this.status, props.id, state.style);
+        }
+    }, {
         key: 'onDragStart',
         value: function onDragStart(e) {
             var props = this.props,
@@ -132,8 +142,6 @@ var DragBase = (function (_React$Component) {
             window.addEventListener('mousemove', this.onDraging);
             window.addEventListener('mouseup', this.onDragEnd);
 
-            this.status = _constantDrag2['default'].STATUS.DRAGING;
-
             // 初始化拖曳state
             var state = this.state,
                 offset = this.offset;
@@ -143,6 +151,10 @@ var DragBase = (function (_React$Component) {
                 left: e.clientX - (offset.left || 0),
                 top: e.clientY - (offset.top || 0)
             };
+
+            this.beforeUpdate(this.status, props.id, style);
+
+            this.status = _constantDrag2['default'].STATUS.DRAGING;
 
             this.setState(state);
         }
@@ -184,7 +196,6 @@ var DragBase = (function (_React$Component) {
         value: function onResizeStart(e) {
             window.addEventListener('mouseup', this.onResizeEnd);
             window.addEventListener('mousemove', this.onResizing);
-            this.status = _constantDrag2['default'].STATUS.RESIZING;
 
             var props = this.props,
                 param = props.param;
@@ -199,6 +210,10 @@ var DragBase = (function (_React$Component) {
 
             state.resizing = size;
             state.style = style;
+
+            this.beforeUpdate(this.status, props.id, style);
+
+            this.status = _constantDrag2['default'].STATUS.RESIZING;
 
             this.setState(state);
         }
@@ -236,6 +251,7 @@ var DragBase = (function (_React$Component) {
 
             var state = this.state;
             var props = this.props;
+
             this.status = _constantDrag2['default'].STATUS.IDLE;
 
             var style = (0, _utilsParseParam2['default'])(state.style, state.resizing);
@@ -261,8 +277,8 @@ var DragBase = (function (_React$Component) {
             var placeholder = undefined,
                 styleObj = {};
 
-            var state = this.state,
-                props = this.props;
+            var state = this.state;
+            var props = this.props;
 
             switch (this.status) {
                 // ing状态下，数据来自自身state，
@@ -281,6 +297,13 @@ var DragBase = (function (_React$Component) {
 
                     placeholder = React.createElement(_dragPlaceholder2['default'], { styleObj: dragingPos });
 
+                    // 传递值给父级进行碰撞检测
+                    var judgeParam = (0, _utilsParseParam2['default'])({ top: null, left: null }, state.draging);
+                    judgeParam.width = dragingPos.width;
+                    judgeParam.height = dragingPos.height;
+
+                    props.onUpdate(this.status, props.id, judgeParam);
+
                     break;
 
                 case _constantDrag2['default'].STATUS.RESIZING:
@@ -294,9 +317,6 @@ var DragBase = (function (_React$Component) {
                     styleObj = props.param.style;
                     break;
             }
-
-            // 传递值给父级
-            props.onUpdate(this.status, props.id, styleObj);
 
             return React.createElement(
                 'div',
@@ -362,6 +382,10 @@ var _utilsMerge = require('../../utils/merge');
 
 var _utilsMerge2 = _interopRequireDefault(_utilsMerge);
 
+var _utilsCollisionDetection = require('../../utils/collision-detection');
+
+var _utilsCollisionDetection2 = _interopRequireDefault(_utilsCollisionDetection);
+
 var defaultDragParam = {
     minSize: [100, 100],
     maxSize: [Infinity, Infinity]
@@ -384,6 +408,9 @@ var DragCore = (function (_React$Component) {
 
         this.freshData = this.freshData.bind(this);
         this.onDragUpdate = this.onDragUpdate.bind(this);
+        this.beforeUpdate = this.beforeUpdate.bind(this);
+
+        this.collision = new _utilsCollisionDetection2['default']();
     }
 
     _createClass(DragCore, [{
@@ -406,7 +433,23 @@ var DragCore = (function (_React$Component) {
         // 用于判断碰撞
     }, {
         key: 'onDragUpdate',
-        value: function onDragUpdate(act, dragId, style) {}
+        value: function onDragUpdate(status, dragId, style) {
+            var myRange = {
+                id: dragId,
+                x: [style.left, style.left + style.width],
+                y: [style.top, style.top + style.height]
+            };
+
+            this.collision.updateMap(dragId, myRange);
+
+            var flag = this.collision.judge(myRange);
+            console.log(flag);
+        }
+    }, {
+        key: 'beforeUpdate',
+        value: function beforeUpdate(status, dragId, style) {
+            this.collision.setMain(dragId);
+        }
     }, {
         key: 'freshData',
         value: function freshData() {
@@ -432,7 +475,22 @@ var DragCore = (function (_React$Component) {
                 var defaultParam = (0, _utilsMerge2['default'])({}, defaultDragParam);
                 dragParam = (0, _utilsMerge2['default'])(defaultParam, dragParam);
 
-                drags.push(React.createElement(_dragBase2['default'], { key: i, param: dragParam, id: dragParam.id, gid: dragParam.gid, onUpdate: this.onDragUpdate }));
+                var dragStyle = dragParam.style;
+
+                // 碰撞检测初始化
+                dragStyle && this.collision.addMap({
+                    id: dragParam.id,
+                    x: [dragStyle.left, dragStyle.left + dragStyle.width],
+                    y: [dragStyle.top, dragStyle.top + dragStyle.height]
+                });
+
+                drags.push(React.createElement(_dragBase2['default'], {
+                    key: i,
+                    param: dragParam,
+                    id: dragParam.id,
+                    gid: dragParam.gid,
+                    beforeUpdate: this.beforeUpdate,
+                    onUpdate: this.onDragUpdate }));
             }
 
             return drags;
@@ -467,7 +525,7 @@ exports['default'] = DragCore;
 module.exports = exports['default'];
 
 
-},{"../../action/drag":"/Users/bottleliu/myspace/git/lab/Explore/react/src/action/drag.js","../../store/drag":"/Users/bottleliu/myspace/git/lab/Explore/react/src/store/drag.js","../../utils/merge":"/Users/bottleliu/myspace/git/lab/Explore/react/src/utils/merge.js","./drag-base":"/Users/bottleliu/myspace/git/lab/Explore/react/src/component/drag/drag-base.js","./drag-placeholder":"/Users/bottleliu/myspace/git/lab/Explore/react/src/component/drag/drag-placeholder.js"}],"/Users/bottleliu/myspace/git/lab/Explore/react/src/component/drag/drag-placeholder.js":[function(require,module,exports){
+},{"../../action/drag":"/Users/bottleliu/myspace/git/lab/Explore/react/src/action/drag.js","../../store/drag":"/Users/bottleliu/myspace/git/lab/Explore/react/src/store/drag.js","../../utils/collision-detection":"/Users/bottleliu/myspace/git/lab/Explore/react/src/utils/collision-detection.js","../../utils/merge":"/Users/bottleliu/myspace/git/lab/Explore/react/src/utils/merge.js","./drag-base":"/Users/bottleliu/myspace/git/lab/Explore/react/src/component/drag/drag-base.js","./drag-placeholder":"/Users/bottleliu/myspace/git/lab/Explore/react/src/component/drag/drag-placeholder.js"}],"/Users/bottleliu/myspace/git/lab/Explore/react/src/component/drag/drag-placeholder.js":[function(require,module,exports){
 'use strict';
 
 Object.defineProperty(exports, '__esModule', {
@@ -930,7 +988,164 @@ exports["default"] = arrHasKey;
 module.exports = exports["default"];
 
 
-},{}],"/Users/bottleliu/myspace/git/lab/Explore/react/src/utils/merge.js":[function(require,module,exports){
+},{}],"/Users/bottleliu/myspace/git/lab/Explore/react/src/utils/collision-detection.js":[function(require,module,exports){
+'use strict';
+
+Object.defineProperty(exports, '__esModule', {
+    value: true
+});
+
+function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { 'default': obj }; }
+
+var _arrHasKey = require('./arr-has-key');
+
+var _arrHasKey2 = _interopRequireDefault(_arrHasKey);
+
+/**
+ * 碰撞检测，纯数据
+ */
+/**
+ * 工具方法集
+ * @type {Object}
+ */
+var _utils = {};
+
+/**
+ * 核心判断方法
+ * @return {Boolean}    [description]
+ */
+_utils.judgeCore = function (aRange, bRange) {
+
+    // (aMaxX < bMinX || aMinX > bMaxX || aMaxY < bMinY || aMinY > bMaxY)
+
+    return !(aRange.x[1] < bRange.x[0] || aRange.x[0] > bRange.x[1] || aRange.y[1] < bRange.y[0] || aRange.y[0] > bRange.y[1]);
+};
+
+/**
+ * 批量判断
+ * @param  {[type]} aRange [description]
+ * @param  {[type]} bMaps  [description]
+ * @return {[type]}        [description]
+ */
+_utils.judgeBatch = function (aRange, bMaps, skipId) {
+    var resultList = {};
+    var result = false;
+    var i = 0;
+    var mapL = bMaps.length;
+
+    for (; i < mapL; i++) {
+        var mapItem = bMaps[i],
+            mapId = mapItem.id;
+
+        // 忽略点默认未碰撞
+        if (mapId === skipId) {
+            resultList[mapId] = false;
+            continue;
+        }
+
+        var flag = _utils.judgeCore(aRange, mapItem);
+        resultList[mapId] = flag;
+
+        if (flag) {
+            result = true;
+            break;
+        }
+    }
+
+    return {
+        list: resultList,
+        flag: result
+    };
+};
+
+/**
+ * 创建Map对象，位置关系为相对于外层节点
+ * @param  {[type]} node [description]
+ * @return {[type]}      [description]
+ */
+_utils.getMap = function (node) {
+    var ndW = nd.offsetWidth;
+    var ndH = nd.offsetHeight;
+    var ndX = nd.offsetLeft;
+    var ndY = nd.offsetTop;
+
+    return {
+        x: [ndX, ndX + ndW],
+        y: [ndY, ndY + ndH]
+    };
+};
+
+/**
+ * 碰撞检测构造函数
+ * @param {[type]} maps 参考节点Map
+ * [{x: [0, 100], y: [0, 100]}, id: mapId]
+ */
+var Collision = function Collision(maps) {
+    this.map = maps || [];
+};
+
+/**
+ * 设置map里当前的“主角”， 
+ * 实质为待判断的map
+ */
+Collision.prototype.setMain = function (id) {
+    var pos = (0, _arrHasKey2['default'])(this.map, 'id', id);
+
+    this.lead = id;
+
+    return this;
+};
+
+/**
+ * 判断碰撞
+ * @param  {[type]} myRange {x: [minX, maxX], y: [minY, maxY]}
+ * @return {[type]}      [description]
+ */
+Collision.prototype.judge = function (myRange) {
+    var self = this;
+
+    var result = undefined;
+    if (!this.map.length) {
+        result = {
+            list: [],
+            flag: false
+        };
+    }
+    result = _utils.judgeBatch(myRange, this.map, this.lead);
+
+    return result;
+};
+
+Collision.prototype.updateMap = function (mid, map) {
+    var pos = (0, _arrHasKey2['default'])(this.map, 'id', mid);
+
+    if (pos === -1) {
+        return false;
+    }
+
+    this.map.splice(pos, 1, map);
+    return true;
+};
+
+Collision.prototype.addMap = function (map) {
+    if (map && map.hasOwnProperty('id')) {
+        var pos = (0, _arrHasKey2['default'])(this.map, 'id', map.id);
+
+        if (pos !== -1) {
+            return false;
+        }
+
+        this.map.push(map);
+
+        return true;
+    }
+};
+
+exports['default'] = Collision;
+module.exports = exports['default'];
+
+
+},{"./arr-has-key":"/Users/bottleliu/myspace/git/lab/Explore/react/src/utils/arr-has-key.js"}],"/Users/bottleliu/myspace/git/lab/Explore/react/src/utils/merge.js":[function(require,module,exports){
 /**
  * 对象合并，影响源
  * @param  {[type]} rootObj   [description]

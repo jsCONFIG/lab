@@ -35,6 +35,15 @@ class DragBase extends React.Component {
         this.onResizeStart = this.onResizeStart.bind(this);
         this.onResizing = this.onResizing.bind(this);
         this.onResizeEnd = this.onResizeEnd.bind(this);
+
+        this.beforeUpdate = this.beforeUpdate.bind(this);
+
+    }
+
+    beforeUpdate () {
+        let [state, props] = [this.state, this.props];
+
+        props.beforeUpdate(this.status, props.id, state.style);
     }
 
     onDragStart (e) {
@@ -49,8 +58,6 @@ class DragBase extends React.Component {
         window.addEventListener('mousemove', this.onDraging);
         window.addEventListener('mouseup', this.onDragEnd);
 
-        this.status = constants.STATUS.DRAGING;
-
         // 初始化拖曳state
         let state = this.state,
         offset = this.offset;
@@ -60,6 +67,10 @@ class DragBase extends React.Component {
             left: e.clientX - (offset.left || 0),
             top: e.clientY - (offset.top || 0)
         };
+
+        this.beforeUpdate(this.status, props.id, style);
+
+        this.status = constants.STATUS.DRAGING;
 
         this.setState(state);
     }
@@ -97,7 +108,6 @@ class DragBase extends React.Component {
     onResizeStart (e) {
         window.addEventListener('mouseup', this.onResizeEnd);
         window.addEventListener('mousemove', this.onResizing);
-        this.status = constants.STATUS.RESIZING;
 
         let props = this.props,
             param = props.param;
@@ -113,6 +123,10 @@ class DragBase extends React.Component {
         state.resizing = size;
         state.style = style;
 
+        this.beforeUpdate(this.status, props.id, style);
+
+        this.status = constants.STATUS.RESIZING;
+        
         this.setState(state);
     }
 
@@ -145,8 +159,7 @@ class DragBase extends React.Component {
         window.removeEventListener('mouseup', this.onResizeEnd);
         window.removeEventListener('mousemove', this.onResizing);
 
-        let state = this.state;
-        let props = this.props;
+        let [state, props] = [this.state, this.props];
         this.status = constants.STATUS.IDLE;
 
         let style = parseParam(state.style, state.resizing);
@@ -170,8 +183,7 @@ class DragBase extends React.Component {
         let placeholder,
             styleObj = {};
 
-        let state = this.state,
-            props = this.props;
+        let [state, props] = [this.state, this.props];
 
         switch (this.status) {
             // ing状态下，数据来自自身state，
@@ -192,6 +204,13 @@ class DragBase extends React.Component {
                     <DragPlaceholder  styleObj={dragingPos} />
                 );
 
+                // 传递值给父级进行碰撞检测
+                let judgeParam = parseParam({top: null, left: null}, state.draging);
+                judgeParam.width = dragingPos.width;
+                judgeParam.height = dragingPos.height;
+
+                props.onUpdate(this.status, props.id, judgeParam);
+
                 break;
 
             case constants.STATUS.RESIZING:
@@ -206,9 +225,6 @@ class DragBase extends React.Component {
                 styleObj = props.param.style;
                 break;
         }
-        
-        // 传递值给父级
-        props.onUpdate(this.status, props.id, styleObj);
 
         return (
             <div className="bdrag-mod" style={styleObj} >
