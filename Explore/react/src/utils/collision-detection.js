@@ -31,6 +31,81 @@ _utils.judgeCore = (aRange, bRange, buffer = [0, 0]) => {
     return flag;
 };
 
+_utils.keepNoCollision = (maps) => {
+    // 按y起点升序排列
+    maps = maps.slice(0).sort((aMap, bMap) => {
+        return aMap.y[0] > bMap.y[0] ? -1 : 1;
+    });
+
+    let hasCollision = false;
+
+    for (let i = 0, mapNum = maps.length; i < mapNum; i++) {
+        let map = maps[i];
+        map = {
+            id: map.id,
+            x: map.x.slice(0),
+            y: map.y.slice(0)
+        };
+
+        let judgeResult = _utils.judgeBatch(map, maps, map.id);
+        if (hasCollision = judgeResult.flag) {
+            let resultList = judgeResult.list;
+            
+            for (let j = i; j < mapNum; j++) {
+                let nextMap = maps[j];
+
+                // 表示有碰撞
+                if (resultList[nextMap.id]) {
+                    let offsetY = map.y[1] - nextMap.y[0];
+                    nextMap.y = [nextMap.y[0] + offsetY, nextMap.y[1] + offsetY];
+                }
+            }
+        }
+    }
+
+    if (hasCollision) {
+        return _utils.keepNoCollision(maps);
+    }
+
+    return maps;
+};
+
+/**
+ * 获取建议的非碰撞情况下的map列表
+ * @param  {[type]} maps      [description]
+ * @param  {[type]} activeMap [description]
+ * @return {[type]}           [description]
+ */
+_utils.getSuggest = (maps, activeMap) => {
+    maps = maps.slice(0);
+    let resultMaps = [];
+
+    // 先确保activeMap的位置没被占用
+    let judgeResult = _utils.judgeBatch(activeMap, maps);
+
+    if (judgeResult.flag) {
+        let resultList = judgeResult.list;
+
+        for (let i = 0, mapNum = maps.length; i < mapNum; i++) {
+            let map = maps[i];
+
+            // 占用了active节点时，全部下移到active节点之下
+            // 给active节点腾出位置来
+            if (resultList[map.id]) {
+                let offsetY = activeMap.y[1] - map.y[0];
+                map.y = [map.y[0] + offsetY, map.y[1] + offsetY]
+            }
+
+        }
+
+    }
+
+    // 再保证其它节点不重叠
+    resultMaps = _utils.keepNoCollision(maps);
+
+    return resultMaps;
+};
+
 /**
  * 批量判断
  * @param  {[type]} aRange [description]
