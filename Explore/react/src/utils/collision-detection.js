@@ -67,7 +67,7 @@ _utils.judgeBatch = (aRange, bMaps, skipId, buffer) => {
     };
 };
 
-_utils.keepNoCollision = (maps) => {
+_utils.keepNoCollision = (maps, collisionBuffer = [0, 0], suggestBuffer = [0, 0]) => {
     // 按y起点升序排列
     maps = maps.slice(0).sort((aMap, bMap) => {
         return aMap.y[0] > bMap.y[0] ? 1 : -1;
@@ -83,7 +83,7 @@ _utils.keepNoCollision = (maps) => {
             y: map.y.slice(0)
         };
 
-        let judgeResult = _utils.judgeBatch(map, maps, map.id);
+        let judgeResult = _utils.judgeBatch(map, maps, map.id, collisionBuffer);
         if (hasCollision = judgeResult.flag) {
             let resultList = judgeResult.list;
             
@@ -93,14 +93,14 @@ _utils.keepNoCollision = (maps) => {
                 // 表示有碰撞
                 if (resultList[nextMap.id]) {
                     let offsetY = map.y[1] - nextMap.y[0];
-                    nextMap.y = [nextMap.y[0] + offsetY, nextMap.y[1] + offsetY];
+                    nextMap.y = [nextMap.y[0] + offsetY + suggestBuffer[1], nextMap.y[1] + offsetY + suggestBuffer[1]];
                 }
             }
         }
     }
 
     if (hasCollision) {
-        return _utils.keepNoCollision(maps);
+        return _utils.keepNoCollision(maps, collisionBuffer, suggestBuffer);
     }
 
     return maps;
@@ -112,12 +112,12 @@ _utils.keepNoCollision = (maps) => {
  * @param  {[type]} activeMap [description]
  * @return {[type]}           [description]
  */
-_utils.getSuggest = (maps, activeMap) => {
+_utils.getSuggest = (maps, activeMap, collisionBuffer = [0, 0], suggestBuffer = [0, 0]) => {
     maps = maps.slice(0);
     let resultMaps = [];
 
     // 先确保activeMap的位置没被占用
-    let judgeResult = _utils.judgeBatch(activeMap, maps);
+    let judgeResult = _utils.judgeBatch(activeMap, maps, undefined, collisionBuffer);
 
     if (judgeResult.flag) {
         let resultList = judgeResult.list;
@@ -128,7 +128,7 @@ _utils.getSuggest = (maps, activeMap) => {
             // 占用了active节点时，全部下移到active节点之下
             // 给active节点腾出位置来
             if (resultList[map.id]) {
-                let offsetY = activeMap.y[1] - map.y[0];
+                let offsetY = activeMap.y[1] - map.y[0] + suggestBuffer[1];
                 map.y = [map.y[0] + offsetY, map.y[1] + offsetY]
             }
 
@@ -137,7 +137,7 @@ _utils.getSuggest = (maps, activeMap) => {
     }
 
     // 再保证其它节点不重叠
-    resultMaps = _utils.keepNoCollision(maps);
+    resultMaps = _utils.keepNoCollision(maps, collisionBuffer, suggestBuffer);
 
     return resultMaps;
 };
@@ -149,18 +149,24 @@ _utils.getSuggest = (maps, activeMap) => {
  */
 const Collision = function (maps, opts = {}) {
     this.map = maps || [];
-    this.bufferX = opts.bufferX || 0;
-    this.bufferY = opts.bufferY || 0;
+    this.suggestBuffer = opts.suggestBuffer || [0, 0];
+    this.collisionBuffer = opts.collisionBuffer || [0, 0];
 };
 
 /**
- * 设置缓冲判断
- * @param {[type]} bufferX [description]
- * @param {[type]} bufferY [description]
+ * 设置碰撞缓冲
  */
-Collision.prototype.setBuffer = function(bufferX, bufferY) {
-    this.bufferX = bufferX || 0;
-    this.bufferY = bufferY || 0;
+Collision.prototype.setCollisionBuffer = function(collisionBuffer = [0, 0]) {
+    this.collisionBuffer = collisionBuffer;
+    return this;
+};
+
+/**
+ * 设置suggest缓冲
+ */
+Collision.prototype.setSuggestBuffer = function(suggestBuffer = [0, 0]) {
+    this.suggestBuffer = suggestBuffer;
+    return this;
 };
 
  /**
@@ -169,7 +175,6 @@ Collision.prototype.setBuffer = function(bufferX, bufferY) {
   */
 Collision.prototype.setMain = function (id) {
     let pos = arrHasKey(this.map, 'id', id);
-
     this.lead = id;
 
     return this;
@@ -237,7 +242,7 @@ Collision.prototype.sortMap = function (byWhat = 'y', isDesc) {
  * @param {object} judgeParam 碰撞判断参数，不填则实时获取
  * @return {[type]}                [description]
  */
-Collision.prototype.getSuggestPos = function(judgeParam) {
+Collision.prototype.getSuggestPos = function(judgeParam, collisionBuffer, suggestBuffer) {
     if (!judgeParam) {
         let pos = arrHasKey(this.map, 'id', this.lead);
         if (pos === -1) {
@@ -267,7 +272,7 @@ Collision.prototype.getSuggestPos = function(judgeParam) {
 
     }
 
-    return _utils.getSuggest(mapCopy, activeMap);
+    return _utils.getSuggest(mapCopy, activeMap, collisionBuffer || this.collisionBuffer, suggestBuffer || this.suggestBuffer);
 };
 
 export default Collision;

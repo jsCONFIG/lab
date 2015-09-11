@@ -10,7 +10,8 @@ class Main extends React.Component {
                 height: 100,
                 top: 100,
                 left: 0
-            }
+            },
+            node: (<div>123</div>)
         }, {
             id: '2',
             gid: 123456,
@@ -40,7 +41,8 @@ class Main extends React.Component {
             }
         }];
         return (
-            <DragCore id={'123456'} param={drags}></DragCore>
+            <DragCore id={'123456'} param={drags}>
+            </DragCore>
         );
     }
 };

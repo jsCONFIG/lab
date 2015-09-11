@@ -70,7 +70,9 @@ class DragBase extends React.Component {
 
         this.status = constants.STATUS.RESIZING;
         
-        this.setState(state);
+        this.setState(state, function () {
+            props.onResizeStart(e, props.id);
+        });
     }
 
     onResizing (e) {
@@ -117,9 +119,12 @@ class DragBase extends React.Component {
     componentDidUpdate () {
         let [state, props] = [this.state, this.props];
 
+        this.setStable = props.setStable;
+
         // 稳定状态数据更新
-        if (this.status === constants.STATUS.IDLE || props.setStable) {
-            props.setStable = false;
+        if (this.status === constants.STATUS.IDLE || this.setStable) {
+            this.setStable = false;
+
             this.displayData.stableData = parseParam({
                 width: null,
                 height: null,
@@ -179,7 +184,6 @@ class DragBase extends React.Component {
     }
 
     render () {
-
         let placeholder,
             styleObj = {};
 
@@ -200,6 +204,7 @@ class DragBase extends React.Component {
 
         return (
             <div className="bdrag-mod" style={styleObj} >
+                {this.props.children}
                 <span className="bdrag-drag-handle" onMouseDown={this.onDragStart}>|||</span>
                 {placeholder}
                 <span className="bdrag-resize-handle" onMouseDown={this.onResizeStart}>┘</span>

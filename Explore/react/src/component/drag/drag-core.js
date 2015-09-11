@@ -10,7 +10,8 @@ import arrHasKey from '../../utils/arr-has-key';
 
 const defaultDragParam = {
     minSize: [100, 100],
-    maxSize: [Infinity, Infinity]
+    maxSize: [Infinity, Infinity],
+    buffer: [5, 5]
 };
 
 // 根据碰撞参数，得到被碰撞节点应该所在的位置
@@ -43,12 +44,16 @@ class DragCore extends React.Component {
         this.onDragStart = this.onDragStart.bind(this);
         this.onDraging = this.onDraging.bind(this);
         this.onDragEnd = this.onDragEnd.bind(this);
+        this.onResizeStart = this.onResizeStart.bind(this);
         this.freshData = this.freshData.bind(this);
         this.judgeUpdate = this.judgeUpdate.bind(this);
         this.beforeUpdate = this.beforeUpdate.bind(this);
 
         // 初始化碰撞检测
-        this.collision = new collisionDetection();
+        this.collision = new collisionDetection([], {
+            collisionBuffer: [-1, -1],
+            suggestBuffer: [5, 10]
+        });
 
         // 辅助ing状态下被碰撞移位节点的复原碰撞检测
         this.helpCollision = new collisionDetection()
@@ -78,8 +83,18 @@ class DragCore extends React.Component {
     judgeUpdate () {
         let dragId = this.activeDrag,
             state = this.state,
+            props = this.props,
             style = state.draging,
             status = this.status;
+
+        if (dragId === null) {
+            return;
+        }
+
+        if (!style) {
+            let dragItem = dragStore.get.drag(dragId, props.id);
+            style = dragItem.style;
+        }
 
         let myRange = {
             id: dragId,
@@ -111,7 +126,6 @@ class DragCore extends React.Component {
         for (let i in groupDrags) {
 
             if (groupDrags.hasOwnProperty(i)) {
-
                 let suggestItem,
                     dragItem = groupDrags[i],
                     copyStyle = merge({}, dragItem.style),
@@ -148,7 +162,11 @@ class DragCore extends React.Component {
             list: groupDrags
         };
 
-        this.setState(state);
+        const judgeUpdate = this.judgeUpdate;
+
+        this.setState(state, function () {
+            judgeUpdate();
+        });
     }
 
     buildDragBase (dragParamList) {
@@ -200,12 +218,24 @@ class DragCore extends React.Component {
                     param = {dragParam}
                     id = {dragParam.id}
                     gid = {dragParam.gid}
-                    onDragStart = {this.onDragStart} />
+                    onDragStart = {this.onDragStart}
+                    onResizeStart = {this.onResizeStart} >
+                    {dragParam.node}
+                </DragBase>
             );
 
         }
 
         return drags;
+    }
+
+    onResizeStart (e, dragId) {
+        this.status = constants.STATUS.RESIZING;
+
+        this.activeDrag = dragId;
+
+        // 设置碰撞主元素
+        this.collision.setMain(dragId);
     }
 
     onDragStart (e, dragId) {
