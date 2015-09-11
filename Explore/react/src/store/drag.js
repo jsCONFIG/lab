@@ -11,7 +11,7 @@ const add = {
     // 创建拖拽组，屏蔽组外其它组件的干扰
     group (gid, params) {
         if (!dragGroup[gid]) {
-            dragGroup[gid] = [];
+            dragGroup[gid] = {};
         }
 
         // 有初始化数据到group
@@ -27,16 +27,15 @@ const add = {
                 // 做一个ID重复检测，有重复的ID则忽略
                 // 强制更新使用对应的更新方法
                 if (dragItem && dragItem.id) {
-                    let pos = arrHasKey(groupDragList, 'id', dragItem.id);
 
-                    if (pos != -1) {
+                    if (groupDragList.hasOwnProperty(dragItem.id)) {
                         break;
                     }
 
                     // 增加gid参数
                     dragItem.gid = gid;
 
-                    groupDragList.push(dragItem);
+                    groupDragList[dragItem.id] = (dragItem);
 
                 }
 
@@ -53,14 +52,12 @@ const add = {
 
         let myGroup = dragGroup[param.gid];
 
-        let pos = arrHasKey(myGroup, 'id', param.id);
-
         // 强制使用对应的更新方法执行更新
-        if (pos != -1) {
+        if (myGroup.hasOwnProperty(param.id)) {
             return;
         }
 
-        myGroup.push(param);
+        myGroup[param.id] = param;
     }
 };
 
@@ -78,8 +75,20 @@ const del = {
 // 改操作
 const update = {
     // 更新对应的组的参数
-    group (param, groupId) {
+    // 直接替换
+    group (params, gid) {
+        let myGroup = dragGroup[gid];
+        if (myGroup) {
+            for (let i in myGroup) {
+                if (myGroup.hasOwnProperty(i) && params[i]) {
+                    myGroup[i] = params;
+                }
+            }
 
+            return myGroup;
+        }
+
+        return false;
     },
 
     // 更新对应Drag的参数
@@ -90,16 +99,13 @@ const update = {
 
         let myGroup = dragGroup[param.gid];
 
-        let pos = arrHasKey(myGroup, 'id', param.id);
-
-        // 强制使用对应的更新方法执行更新
-        if (pos == -1) {
+        if (!myGroup || !myGroup.hasOwnProperty(param.id)) {
             return;
         }
 
-        let myDrag = myGroup[pos];
+        let myDrag = myGroup[param.id];
 
-        merge(myDrag, param);
+        myGroup[param.id] = merge(myDrag, param);
     }
 };
 
@@ -120,13 +126,11 @@ const get = {
 
         let myGroup = dragGroup[gid];
 
-        let pos = arrHasKey(myGroup, 'id', dragId);
-
-        if (pos === -1) {
+        if (!myGroup.hasOwnProperty(dragId)) {
             return null;
         }
 
-        return myGroup[pos];
+        return myGroup[dragId];
     }
 };
 
@@ -163,7 +167,7 @@ dragStore.dispatch = dispatcher.register((action) => {
 
         // drag group更新
         case dragConstants.FETCH_DRAG_GROUP_UPDATE:
-            update.group(spec);
+            update.group(spec.id, spec.list);
             break;
     }
     

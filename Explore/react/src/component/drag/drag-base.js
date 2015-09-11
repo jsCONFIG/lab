@@ -2,7 +2,7 @@ import dragActs from '../../action/drag';
 import constants from '../../constant/drag';
 import parseParam from '../../utils/parse-param';
 import DragPlaceholder from './drag-placeholder';
-
+import collisionDetection from '../../utils/collision-detection';
 
 /**
  * 单个拖拽组件，考虑到性能，仅在END时提交store，
@@ -26,82 +26,27 @@ class DragBase extends React.Component {
 
         this.status = constants.STATUS.IDLE;
 
-        this.offset = {};
+        // 展现相关数据
+        this.displayData = {
+            // 最近一次稳定状态下的展现数据
+            stableData: {},
+
+            // 临时状态下的展现数据
+            tempData: {}
+        };
 
         this.onDragStart = this.onDragStart.bind(this);
-        this.onDraging = this.onDraging.bind(this);
-        this.onDragEnd = this.onDragEnd.bind(this);
 
         this.onResizeStart = this.onResizeStart.bind(this);
         this.onResizing = this.onResizing.bind(this);
         this.onResizeEnd = this.onResizeEnd.bind(this);
 
-        this.beforeUpdate = this.beforeUpdate.bind(this);
-
-    }
-
-    beforeUpdate () {
-        let [state, props] = [this.state, this.props];
-
-        props.beforeUpdate(this.status, props.id, state.style);
     }
 
     onDragStart (e) {
-        let props = this.props,
-            style = props.param.style;
-
-        this.offset = {
-            left: e.clientX - (style.left || 0),
-            top: e.clientY - (style.top || 0)
-        };
-
-        window.addEventListener('mousemove', this.onDraging);
-        window.addEventListener('mouseup', this.onDragEnd);
-
-        // 初始化拖曳state
-        let state = this.state,
-        offset = this.offset;
-
-        state.style = style;
-        state.draging = {
-            left: e.clientX - (offset.left || 0),
-            top: e.clientY - (offset.top || 0)
-        };
-
-        this.beforeUpdate(this.status, props.id, style);
-
-        this.status = constants.STATUS.DRAGING;
-
-        this.setState(state);
-    }
-
-    onDraging (e) {
-        const offset = this.offset;
-        const pos = {
-            left: e.clientX - (offset.left || 0),
-            top: e.clientY - (offset.top || 0)
-        };
-
-        let state = this.state;
-        state.draging = pos;
-
-        this.setState(state);
-    }
-
-    onDragEnd (e) {
-        window.removeEventListener('mouseup', this.onDragEnd);
-        window.removeEventListener('mousemove', this.onDraging);
-
-        let props = this.props,
-            state = this.state;
-
-        this.status = constants.STATUS.IDLE;
-
-        dragActs.fetchDrag('update', {
-            style: parseParam(state.style, state.draging),
-            id: props.id,
-            gid: props.gid
-        });
+        let props = this.props;
+        
+        props.onDragStart(e, props.id);
     }
 
     // 尺寸改变
@@ -122,8 +67,6 @@ class DragBase extends React.Component {
 
         state.resizing = size;
         state.style = style;
-
-        this.beforeUpdate(this.status, props.id, style);
 
         this.status = constants.STATUS.RESIZING;
         
@@ -171,6 +114,63 @@ class DragBase extends React.Component {
         });
     }
 
+    componentDidUpdate () {
+        let [state, props] = [this.state, this.props];
+
+        // 稳定状态数据更新
+        if (this.status === constants.STATUS.IDLE || props.setStable) {
+            props.setStable = false;
+            this.displayData.stableData = parseParam({
+                width: null,
+                height: null,
+                left: null,
+                top: null
+            }, props.param.style);
+        }
+
+        // 临时状态更新
+        else {
+            this.displayData.tempData = parseParam({
+                width: null,
+                height: null,
+                left: null,
+                top: null
+            }, props.param.style);
+        }
+    }
+
+    // 复原到上一个稳定状态
+    backToStable () {
+        let props = this.props;
+
+        let stableStyle = this.displayData.stableData;
+        dragActs.fetchDrag('update', {
+            style: stableStyle,
+            id: props.id,
+            gid: props.gid
+        });
+    }
+
+    // 尝试复原到上一个稳定状态
+    // 传入其它参考节点的位置，检测回去的Y轴方向是否有东西阻挡
+    tryToBack (maps) {
+        let styleData = this.displayData;
+
+        let myRange = {
+            x: [styleData.tempData.left, styleData.tempData.left + styleData.tempData.width],
+            y: [styleData.tempData.top, styleData.tempData.top]
+        };
+        let collision = new collisionDetection(maps);
+
+        // 未碰撞的情况下复原
+        if (!collision.judge(myRange).flag) {
+            this.backToStable();
+            return true;
+        }
+
+        return false;
+    }
+
     componentWillUnmout () {
         window.removeEventListener('mouseup', this.onDragEnd);
         window.removeEventListener('mousemove', this.onDraging);
@@ -186,41 +186,13 @@ class DragBase extends React.Component {
         let [state, props] = [this.state, this.props];
 
         switch (this.status) {
-            // ing状态下，数据来自自身state，
-            // 以此来减少反射弧，提高性能
-            case constants.STATUS.DRAGING:
-                styleObj = state.style;
-
-                let dragingPos = parseParam({
-                    width: null,
-                    height: null
-                }, styleObj);
-
-                // 占位节点位于容器内部，取相对位置
-                dragingPos.top = state.draging.top - styleObj.top;
-                dragingPos.left = state.draging.left - styleObj.left;
-
-                placeholder = (
-                    <DragPlaceholder  styleObj={dragingPos} />
-                );
-
-                // 传递值给父级进行碰撞检测
-                let judgeParam = parseParam({top: null, left: null}, state.draging);
-                judgeParam.width = dragingPos.width;
-                judgeParam.height = dragingPos.height;
-
-                props.onUpdate(this.status, props.id, judgeParam);
-
-                break;
-
+            // resizing 过程，走自身的state
             case constants.STATUS.RESIZING:
                 styleObj = state.style;
                 styleObj = parseParam(styleObj, state.resizing);
-
-
                 break;
 
-            // 操作完成，走flux来更新
+            // 操作完成，走flux来更新状态链
             case constants.STATUS.IDLE:
                 styleObj = props.param.style;
                 break;
