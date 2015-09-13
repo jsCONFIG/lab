@@ -38,8 +38,6 @@ class DragBase extends React.Component {
         this.onDragStart = this.onDragStart.bind(this);
 
         this.onResizeStart = this.onResizeStart.bind(this);
-        this.onResizing = this.onResizing.bind(this);
-        this.onResizeEnd = this.onResizeEnd.bind(this);
 
     }
 
@@ -51,69 +49,9 @@ class DragBase extends React.Component {
 
     // 尺寸改变
     onResizeStart (e) {
-        window.addEventListener('mouseup', this.onResizeEnd);
-        window.addEventListener('mousemove', this.onResizing);
-
-        let props = this.props,
-            param = props.param;
-
-        let state = this.state;
-
-        let style = param.style;
-        let size = {
-            width: e.clientX - style.left,
-            height: e.clientY - style.top
-        };
-
-        state.resizing = size;
-        state.style = style;
-
-        this.status = constants.STATUS.RESIZING;
-        
-        this.setState(state, function () {
-            props.onResizeStart(e, props.id);
-        });
-    }
-
-    onResizing (e) {
         let props = this.props;
-        let param = props.param;
-
-        let state = this.state;
-        let style = state.style;
-        let size = {
-            width: e.clientX - style.left,
-            height: e.clientY - style.top
-        };
-
-        if (size.width < param.minSize[0]) {
-            size.width = param.minSize[0];
-        }
-
-        if (size.height < param.minSize[1]) {
-            size.height = param.minSize[1];
-        }
-
-        // 尺寸信息存储在resizing中
-        state.resizing = size;
-
-        this.setState(state);
-    }
-
-    onResizeEnd (e) {
-        window.removeEventListener('mouseup', this.onResizeEnd);
-        window.removeEventListener('mousemove', this.onResizing);
-
-        let [state, props] = [this.state, this.props];
-        this.status = constants.STATUS.IDLE;
-
-        let style = parseParam(state.style, state.resizing);
-
-        dragActs.fetchDrag('update', {
-            style: style,
-            id: props.id,
-            gid: props.gid
-        });
+        
+        props.onResizeStart(e, props.id);
     }
 
     componentDidUpdate () {
@@ -184,23 +122,10 @@ class DragBase extends React.Component {
     }
 
     render () {
+        let props = this.props;
+
         let placeholder,
-            styleObj = {};
-
-        let [state, props] = [this.state, this.props];
-
-        switch (this.status) {
-            // resizing 过程，走自身的state
-            case constants.STATUS.RESIZING:
-                styleObj = state.style;
-                styleObj = parseParam(styleObj, state.resizing);
-                break;
-
-            // 操作完成，走flux来更新状态链
-            case constants.STATUS.IDLE:
-                styleObj = props.param.style;
-                break;
-        }
+            styleObj = props.param.style;
 
         return (
             <div className="bdrag-mod" style={styleObj} >

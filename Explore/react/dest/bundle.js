@@ -123,8 +123,6 @@ var DragBase = (function (_React$Component) {
         this.onDragStart = this.onDragStart.bind(this);
 
         this.onResizeStart = this.onResizeStart.bind(this);
-        this.onResizing = this.onResizing.bind(this);
-        this.onResizeEnd = this.onResizeEnd.bind(this);
     }
 
     _createClass(DragBase, [{
@@ -139,73 +137,9 @@ var DragBase = (function (_React$Component) {
     }, {
         key: 'onResizeStart',
         value: function onResizeStart(e) {
-            window.addEventListener('mouseup', this.onResizeEnd);
-            window.addEventListener('mousemove', this.onResizing);
-
-            var props = this.props,
-                param = props.param;
-
-            var state = this.state;
-
-            var style = param.style;
-            var size = {
-                width: e.clientX - style.left,
-                height: e.clientY - style.top
-            };
-
-            state.resizing = size;
-            state.style = style;
-
-            this.status = _constantDrag2['default'].STATUS.RESIZING;
-
-            this.setState(state, function () {
-                props.onResizeStart(e, props.id);
-            });
-        }
-    }, {
-        key: 'onResizing',
-        value: function onResizing(e) {
-            var props = this.props;
-            var param = props.param;
-
-            var state = this.state;
-            var style = state.style;
-            var size = {
-                width: e.clientX - style.left,
-                height: e.clientY - style.top
-            };
-
-            if (size.width < param.minSize[0]) {
-                size.width = param.minSize[0];
-            }
-
-            if (size.height < param.minSize[1]) {
-                size.height = param.minSize[1];
-            }
-
-            // 尺寸信息存储在resizing中
-            state.resizing = size;
-
-            this.setState(state);
-        }
-    }, {
-        key: 'onResizeEnd',
-        value: function onResizeEnd(e) {
-            window.removeEventListener('mouseup', this.onResizeEnd);
-            window.removeEventListener('mousemove', this.onResizing);
-
-            var state = this.state;
             var props = this.props;
 
-            this.status = _constantDrag2['default'].STATUS.IDLE;
-
-            var style = (0, _utilsParseParam2['default'])(state.style, state.resizing);
-
-            _actionDrag2['default'].fetchDrag('update', {
-                style: style,
-                id: props.id,
-                gid: props.gid
-            });
+            props.onResizeStart(e, props.id);
         }
     }, {
         key: 'componentDidUpdate',
@@ -284,24 +218,10 @@ var DragBase = (function (_React$Component) {
     }, {
         key: 'render',
         value: function render() {
-            var placeholder = undefined,
-                styleObj = {};
-
-            var state = this.state;
             var props = this.props;
 
-            switch (this.status) {
-                // resizing 过程，走自身的state
-                case _constantDrag2['default'].STATUS.RESIZING:
-                    styleObj = state.style;
-                    styleObj = (0, _utilsParseParam2['default'])(styleObj, state.resizing);
-                    break;
-
-                // 操作完成，走flux来更新状态链
-                case _constantDrag2['default'].STATUS.IDLE:
-                    styleObj = props.param.style;
-                    break;
-            }
+            var placeholder = undefined,
+                styleObj = props.param.style;
 
             return React.createElement(
                 'div',
@@ -420,12 +340,18 @@ var DragCore = (function (_React$Component) {
         // 当前被操作的drag id
         this.activeDrag = null;
 
+        // 辅助拖曳时的拖曳位置偏差
         this.offset = {};
+
+        // 辅助resize时的位置
+        this.resizePos = {};
 
         this.onDragStart = this.onDragStart.bind(this);
         this.onDraging = this.onDraging.bind(this);
         this.onDragEnd = this.onDragEnd.bind(this);
         this.onResizeStart = this.onResizeStart.bind(this);
+        this.onResizing = this.onResizing.bind(this);
+        this.onResizeEnd = this.onResizeEnd.bind(this);
         this.freshData = this.freshData.bind(this);
         this.judgeUpdate = this.judgeUpdate.bind(this);
         this.beforeUpdate = this.beforeUpdate.bind(this);
@@ -471,19 +397,28 @@ var DragCore = (function (_React$Component) {
     }, {
         key: 'judgeUpdate',
         value: function judgeUpdate() {
+            var style = undefined;
             var dragId = this.activeDrag,
                 state = this.state,
                 props = this.props,
-                style = state.draging,
                 status = this.status;
 
             if (dragId === null) {
                 return;
             }
 
-            if (!style) {
-                var dragItem = _storeDrag2['default'].get.drag(dragId, props.id);
-                style = dragItem.style;
+            switch (this.status) {
+                case _constantDrag2['default'].STATUS.RESIZING:
+                    style = state.resizing;
+                    break;
+
+                case _constantDrag2['default'].STATUS.DRAGING:
+                    style = state.draging;
+                    break;
+
+                default:
+                    var dragItem = _storeDrag2['default'].get.drag(dragId, props.id);
+                    style = dragItem.style;
             }
 
             var myRange = {
@@ -491,6 +426,7 @@ var DragCore = (function (_React$Component) {
                 x: [style.left, style.left + style.width],
                 y: [style.top, style.top + style.height]
             };
+
             this.collision.updateMap(dragId, myRange);
 
             var suggestPos = this.collision.getSuggestPos();
@@ -595,6 +531,13 @@ var DragCore = (function (_React$Component) {
                     });
                 }
 
+                // 半透明实体
+                if (this.activeDrag === dragParam.id) {
+                    dragStyle.opacity = '.1';
+                } else {
+                    delete dragStyle.opacity;
+                }
+
                 // 碰撞检测初始化
                 dragStyle && this.collision.addMap({
                     id: dragParam.id,
@@ -620,12 +563,109 @@ var DragCore = (function (_React$Component) {
     }, {
         key: 'onResizeStart',
         value: function onResizeStart(e, dragId) {
+            var props = this.props;
+            var state = this.state;
+
+            var param = _storeDrag2['default'].get.drag(dragId, props.id);
+
+            var style = param.style;
+            var size = {
+                width: e.clientX - style.left,
+                height: e.clientY - style.top,
+                left: style.left,
+                top: style.top
+            };
+
+            state.resizing = size;
+
             this.status = _constantDrag2['default'].STATUS.RESIZING;
-
             this.activeDrag = dragId;
-
             // 设置碰撞主元素
             this.collision.setMain(dragId);
+
+            window.addEventListener('mouseup', this.onResizeEnd);
+            window.addEventListener('mousemove', this.onResizing);
+
+            this.setState(state);
+        }
+    }, {
+        key: 'onResizing',
+        value: function onResizing(e) {
+            var props = this.props;
+            var state = this.state;
+
+            var judgeUpdate = this.judgeUpdate;
+            var resizing = state.resizing;
+
+            var size = {
+                width: e.pageX - resizing.left,
+                height: e.pageY - resizing.top,
+                left: resizing.left,
+                top: resizing.top
+            };
+
+            if (size.width < props.minSize[0]) {
+                size.width = props.minSize[0];
+            }
+
+            if (size.width > props.maxSize[0]) {
+                size.width = props.maxSize[0];
+            }
+
+            if (size.height < props.minSize[1]) {
+                size.height = props.minSize[1];
+            }
+
+            if (size.height > props.maxSize[1]) {
+                size.height = props.maxSize[1];
+            }
+
+            // 尺寸信息存储在resizing中
+            state.resizing = size;
+
+            this.setState(state, function () {
+                judgeUpdate();
+            });
+        }
+    }, {
+        key: 'onResizeEnd',
+        value: function onResizeEnd(e) {
+            window.removeEventListener('mouseup', this.onResizeEnd);
+            window.removeEventListener('mousemove', this.onResizing);
+
+            var state = this.state;
+            var props = this.props;
+
+            var resizing = state.resizing,
+                collisionParam = state.collision || {},
+                dragList = state.group.list,
+                dragId = this.activeDrag;
+
+            // 重置状态
+            delete state.resizing;
+            state.collision = {};
+            this.status = _constantDrag2['default'].STATUS.IDLE;
+            this.activeDrag = null;
+            this.resizePos = null;
+
+            for (var i in dragList) {
+                if (dragList.hasOwnProperty(i)) {
+                    // 碰撞数据
+                    if (collisionParam[i]) {
+                        dragList[i].style = collisionParam[i];
+                    }
+
+                    // 当前resize数据
+                    if (i === dragId) {
+                        dragList[i].style = resizing;
+                    }
+                }
+            }
+
+            _actionDrag2['default'].fetchGroup('update', {
+                id: props.id,
+                list: dragList
+            });
         }
     }, {
         key: 'onDragStart',
@@ -733,6 +773,8 @@ var DragCore = (function (_React$Component) {
 
             if (this.status === _constantDrag2['default'].STATUS.DRAGING) {
                 placeholder = React.createElement(_dragPlaceholder2['default'], { styleObj: state.draging });
+            } else if (this.status === _constantDrag2['default'].STATUS.RESIZING) {
+                placeholder = React.createElement(_dragPlaceholder2['default'], { styleObj: state.resizing });
             }
 
             return React.createElement(
@@ -748,6 +790,8 @@ var DragCore = (function (_React$Component) {
 })(React.Component);
 
 ;
+
+DragCore.defaultProps = defaultDragParam;
 
 exports['default'] = DragCore;
 module.exports = exports['default'];

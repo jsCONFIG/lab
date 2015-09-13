@@ -39,12 +39,18 @@ class DragCore extends React.Component {
         // 当前被操作的drag id
         this.activeDrag = null;
 
+        // 辅助拖曳时的拖曳位置偏差
         this.offset = {};
+
+        // 辅助resize时的位置
+        this.resizePos = {};
 
         this.onDragStart = this.onDragStart.bind(this);
         this.onDraging = this.onDraging.bind(this);
         this.onDragEnd = this.onDragEnd.bind(this);
         this.onResizeStart = this.onResizeStart.bind(this);
+        this.onResizing = this.onResizing.bind(this);
+        this.onResizeEnd = this.onResizeEnd.bind(this);
         this.freshData = this.freshData.bind(this);
         this.judgeUpdate = this.judgeUpdate.bind(this);
         this.beforeUpdate = this.beforeUpdate.bind(this);
@@ -81,19 +87,28 @@ class DragCore extends React.Component {
 
     // 用于判断碰撞
     judgeUpdate () {
+        let style;
         let dragId = this.activeDrag,
             state = this.state,
             props = this.props,
-            style = state.draging,
             status = this.status;
 
         if (dragId === null) {
             return;
         }
 
-        if (!style) {
-            let dragItem = dragStore.get.drag(dragId, props.id);
-            style = dragItem.style;
+        switch (this.status) {
+            case constants.STATUS.RESIZING:
+                style = state.resizing;
+                break;
+
+            case constants.STATUS.DRAGING:
+                style = state.draging;
+                break;
+
+            default:
+                let dragItem = dragStore.get.drag(dragId, props.id);
+                style = dragItem.style;
         }
 
         let myRange = {
@@ -101,6 +116,7 @@ class DragCore extends React.Component {
             x: [style.left, style.left + style.width],
             y: [style.top, style.top + style.height]
         };
+        
         this.collision.updateMap(dragId, myRange);
 
         let suggestPos = this.collision.getSuggestPos();
@@ -204,6 +220,14 @@ class DragCore extends React.Component {
                 });
             }
 
+            // 半透明实体
+            if (this.activeDrag === dragParam.id) {
+                dragStyle.opacity = '.1';
+            }
+            else {
+                delete dragStyle.opacity;
+            }
+
 
             // 碰撞检测初始化
             dragStyle && this.collision.addMap({
@@ -230,12 +254,103 @@ class DragCore extends React.Component {
     }
 
     onResizeStart (e, dragId) {
+        let [props, state] = [this.props, this.state];
+        let param = dragStore.get.drag(dragId, props.id);
+
+        let style = param.style;
+        let size = {
+            width: e.clientX - style.left,
+            height: e.clientY - style.top,
+            left: style.left,
+            top: style.top
+        };
+
+        state.resizing = size;
+
         this.status = constants.STATUS.RESIZING;
-
         this.activeDrag = dragId;
-
         // 设置碰撞主元素
         this.collision.setMain(dragId);
+        
+        window.addEventListener('mouseup', this.onResizeEnd);
+        window.addEventListener('mousemove', this.onResizing);
+        
+        this.setState(state);
+    }
+
+    onResizing (e) {
+        let [props, state] = [this.props, this.state];
+
+        const judgeUpdate = this.judgeUpdate;
+        let resizing = state.resizing;
+
+        let size = {
+            width: e.pageX - resizing.left,
+            height: e.pageY - resizing.top,
+            left: resizing.left,
+            top: resizing.top
+        };
+
+        if (size.width < props.minSize[0]) {
+            size.width = props.minSize[0];
+        }
+
+        if (size.width > props.maxSize[0]) {
+            size.width = props.maxSize[0];
+        }
+
+        if (size.height < props.minSize[1]) {
+            size.height = props.minSize[1];
+        }
+
+        if (size.height > props.maxSize[1]) {
+            size.height = props.maxSize[1];
+        }
+
+        // 尺寸信息存储在resizing中
+        state.resizing = size;
+
+        this.setState(state, function () {
+            judgeUpdate();
+        });
+    }
+
+    onResizeEnd (e) {
+        window.removeEventListener('mouseup', this.onResizeEnd);
+        window.removeEventListener('mousemove', this.onResizing);
+
+        let [state, props] = [this.state, this.props];
+
+        let resizing = state.resizing,
+            collisionParam = state.collision || {},
+            dragList = state.group.list,
+            dragId = this.activeDrag;
+
+        // 重置状态
+        delete state.resizing;
+        state.collision = {};
+        this.status = constants.STATUS.IDLE;
+        this.activeDrag = null;
+        this.resizePos = null;
+        
+        for (let i in dragList) {
+            if (dragList.hasOwnProperty(i)) {
+                // 碰撞数据
+                if (collisionParam[i]) {
+                    dragList[i].style = collisionParam[i];
+                }
+
+                // 当前resize数据
+                if (i === dragId) {
+                    dragList[i].style = resizing;
+                }
+            }
+        }
+
+        dragActs.fetchGroup('update', {
+            id: props.id,
+            list: dragList
+        });
     }
 
     onDragStart (e, dragId) {
@@ -339,6 +454,9 @@ class DragCore extends React.Component {
         if (this.status === constants.STATUS.DRAGING) {
             placeholder = <DragPlaceholder  styleObj={state.draging} />;
         }
+        else if (this.status === constants.STATUS.RESIZING) {
+            placeholder = <DragPlaceholder  styleObj={state.resizing} />;   
+        }
 
         return (
             <div className="bdrag-group">
@@ -348,5 +466,7 @@ class DragCore extends React.Component {
         );
     }
 };
+
+DragCore.defaultProps = defaultDragParam;
 
 export default DragCore;
