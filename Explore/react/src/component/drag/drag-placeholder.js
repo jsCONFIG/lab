@@ -1,4 +1,4 @@
-import merge from '../../utils/merge';
+import utils from '../../utils/util';
 
 // 虚拟占位节点
 class DragPlaceholder extends React.Component {
@@ -9,7 +9,7 @@ class DragPlaceholder extends React.Component {
     getStyleParam (param) {
         param = param || this.props;
 
-        let styleObj = merge({
+        let styleObj = utils.merge({
             border: '1px dashed #aaa'
         }, param.styleObj);
 

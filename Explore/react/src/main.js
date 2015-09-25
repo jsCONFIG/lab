@@ -1,48 +1,25 @@
-import DragCore from './component/drag/drag-core';
+import Drag from './component/drag/drag';
 
 class Main extends React.Component {
     render () {
-        let drags = [{
-            id: '1',
-            gid: 123456,
-            style: {
-                width: 200,
-                height: 100,
-                top: 100,
-                left: 0
-            },
-            node: (<div>123</div>)
-        }, {
-            id: '2',
-            gid: 123456,
-            style: {
-                width: 200,
-                height: 100,
-                top: 200,
-                left: 0
-            }
-        }, {
-            id: '3',
-            gid: 123456,
-            style: {
-                width: 200,
-                height: 100,
-                top: 300,
-                left: 0
-            }
-        }, {
-            id: '4',
-            gid: 123456,
-            style: {
-                width: 200,
-                height: 100,
-                top: 400,
-                left: 0
-            }
-        }];
+        let style = {
+            width: 200,
+            height: 100,
+            top: 400,
+            left: 0
+        };
         return (
-            <DragCore id={'123456'} param={drags}>
-            </DragCore>
+            <Drag.Mod>
+                <Drag.Parse id="1" style={style}>
+                    <div>啦啦啦</div>
+                </Drag.Parse>
+                <Drag.Parse id="2" style={style}>
+                    <div>啦啦啦啦</div>
+                </Drag.Parse>
+                <Drag.Parse id="3" style={style}>
+                    <div>啦啦啦啦啦</div>
+                </Drag.Parse>
+            </Drag.Mod>
         );
     }
 };

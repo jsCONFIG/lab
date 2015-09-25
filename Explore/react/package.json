@@ -11,15 +11,8 @@
   "license": "ISC",
   "devDependencies": {
     "gulp": "^3.9.0",
-    "browserify": "^10.2.4",
-    "reactify": "^1.1.1",
-    "vinyl-source-stream": "^1.1.0",
-    "gulp-concat": "latest",
-    "watchify": "latest",
-    "vinyl-buffer": "latest",
-    "gulp-util": "latest",
+    "gulp-babel": "^5.1.0",
     "gulp-sourcemaps": "latest",
-    "lodash.assign": "latest",
-    "babelify": "^6.1.2"
+    "gulp-concat": "latest"
   }
 }

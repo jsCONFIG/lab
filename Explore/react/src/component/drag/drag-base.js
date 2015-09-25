@@ -1,7 +1,6 @@
-import dragActs from '../../action/drag';
-import constants from '../../constant/drag';
-import parseParam from '../../utils/parse-param';
 import DragPlaceholder from './drag-placeholder';
+import constants from '../../constant/drag';
+import utils from '../../utils/util';
 import collisionDetection from '../../utils/collision-detection';
 
 /**
@@ -12,16 +11,8 @@ class DragBase extends React.Component {
     constructor () {
         super();
 
-        this.defaultProps = {
-            param: {
-                style: parseParam(constants.DEFAULT_PARAMS, {}),
-                minSize: [100, 100],
-                maxSize: [Infinity, Infinity]
-            }
-        };
-
         this.state = {
-            style: this.defaultProps.param.style
+            style: utils.smartyMerge(constants.DEFAULT_PARAMS, {})
         };
 
         this.status = constants.STATUS.IDLE;
@@ -41,6 +32,18 @@ class DragBase extends React.Component {
 
     }
 
+    static defaultProps = {
+        param: {
+            style: utils.smartyMerge(constants.DEFAULT_PARAMS, {}),
+            minSize: [100, 100],
+            maxSize: [Infinity, Infinity]
+        },
+        conf: {
+            dragHandle: 'bdrag-drag-handle',
+            resizeHandle: 'bdrag-resize-handle'
+        }
+    }
+
     onDragStart (e) {
         let props = this.props;
         
@@ -51,8 +54,29 @@ class DragBase extends React.Component {
     onResizeStart (e) {
         let props = this.props;
         
-        props.onResizeStart(e, props.id);
+        // 获取初始时的容器右顶点位置
+        let dragMod = this.refs.dragMod;
+
+        // 浏览器顶部距离(同clientX, clientY)
+        let pos = dragMod.getDOMNode().getBoundingClientRect();
+
+        pos = utils.smartyMerge({width: null, height: null, left: null, top: null}, pos);
+        props.onResizeStart(e, props.id, pos);
     }
+
+    // shouldComponentUpdate (nextProps, nextState) {
+    //     let nextStyle = nextProps.param.style;
+    //     let currentStyle = this.props.param.style;
+    //     if (nextStyle.left === currentStyle.left
+    //             && nextStyle.top === currentStyle.top
+    //             && nextStyle.width === currentStyle.width
+    //             && nextStyle.height === currentStyle.height
+    //             && nextStyle.opacity === currentStyle.opacity) {
+    //         return false;
+    //     }
+
+    //     return true;
+    // }
 
     componentDidUpdate () {
         let [state, props] = [this.state, this.props];
@@ -63,7 +87,9 @@ class DragBase extends React.Component {
         if (this.status === constants.STATUS.IDLE || this.setStable) {
             this.setStable = false;
 
-            this.displayData.stableData = parseParam({
+            let stableStyle;
+
+            this.displayData.stableData = stableStyle = utils.smartyMerge({
                 width: null,
                 height: null,
                 left: null,
@@ -73,7 +99,7 @@ class DragBase extends React.Component {
 
         // 临时状态更新
         else {
-            this.displayData.tempData = parseParam({
+            this.displayData.tempData = utils.smartyMerge({
                 width: null,
                 height: null,
                 left: null,
@@ -87,11 +113,6 @@ class DragBase extends React.Component {
         let props = this.props;
 
         let stableStyle = this.displayData.stableData;
-        dragActs.fetchDrag('update', {
-            style: stableStyle,
-            id: props.id,
-            gid: props.gid
-        });
     }
 
     // 尝试复原到上一个稳定状态
@@ -123,16 +144,16 @@ class DragBase extends React.Component {
 
     render () {
         let props = this.props;
-
+        
         let placeholder,
             styleObj = props.param.style;
 
         return (
-            <div className="bdrag-mod" style={styleObj} >
-                {this.props.children}
-                <span className="bdrag-drag-handle" onMouseDown={this.onDragStart}>|||</span>
+            <div className="bdrag-mod" style={styleObj} ref="dragMod">
+                {props.children}
+                <span className={props.conf.dragHandle || "bdrag-drag-handle"} onMouseDown={this.onDragStart}><span className="xk-drag-font">|||</span></span>
                 {placeholder}
-                <span className="bdrag-resize-handle" onMouseDown={this.onResizeStart}>┘</span>
+                <span className={props.conf.resizeHandle || "bdrag-resize-handle"} onMouseDown={this.onResizeStart}></span>
             </div>
         );
     }

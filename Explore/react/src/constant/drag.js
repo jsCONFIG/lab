@@ -6,16 +6,12 @@ const spec = {
         height: 100
     },
     STATUS: {
+        INIT: 'INIT',
         IDLE: 'IDLE',
         DRAGING: 'DRAGING',
-        RESIZING: 'RESIZING'
-    },
-    FETCH_DRAG_GROUP_ADD: 'FETCH_DRAG_GROUP_ADD',
-    FETCH_DRAG_GROUP_DEL: 'FETCH_DRAG_GROUP_DEL',
-    FETCH_DRAG_GROUP_UPDATE: 'FETCH_DRAG_GROUP_UPDATE',
-
-    FETCH_DRAG_ADD: 'FETCH_DRAG_ADD',
-    FETCH_DRAG_DEL: 'FETCH_DRAG_DEL',
-    FETCH_DRAG_UPDATE: 'FETCH_DRAG_UPDATE'
+        RESIZING: 'RESIZING',
+        // 稳定态之前的状态，短暂的
+        BEFORE_IDLE: 'BEFORE_IDLE'
+    }
 };
 export default spec;

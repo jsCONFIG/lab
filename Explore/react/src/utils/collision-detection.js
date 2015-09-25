@@ -1,22 +1,22 @@
-import arrHasKey from './arr-has-key';
-/**
- * 碰撞检测，纯数据
- */
+import utils from './util';
+
+const arrHasKey = utils.arrHasKey;
+
 /**
  * 工具方法集
  * @type {Object}
  */
-let _utils = {};
+let _tools = {};
 
 /**
  * 核心判断方法
  * @return {Boolean}    [description]
  */
-_utils.judgeCore = (aRange, bRange, buffer = [0, 0]) => {
+_tools.judgeCore = (aRange, bRange, buffer = [0, 0]) => {
 
     // (aMaxX < bMinX || aMinX > bMaxX || aMaxY < bMinY || aMinY > bMaxY)
 
-    let flag = !(aRange.x[1] - buffer[0] <= bRange.x[0] || aRange.x[0] + buffer[0] >= bRange.x[1] || aRange.y[1] - buffer[1] <= bRange.y[0] || aRange.y[0] + buffer[1] >= bRange.y[1]);
+    let flag = !(aRange.x[1] + buffer[0] <= bRange.x[0] || aRange.x[0] - buffer[0] >= bRange.x[1] || aRange.y[1] + buffer[1] <= bRange.y[0] || aRange.y[0] - buffer[1] >= bRange.y[1]);
 
     // 撞击的情况，返回撞击程度
     // 即两者交叉部分的距离
@@ -37,7 +37,7 @@ _utils.judgeCore = (aRange, bRange, buffer = [0, 0]) => {
  * @param  {[type]} bMaps  [description]
  * @return {[type]}        [description]
  */
-_utils.judgeBatch = (aRange, bMaps, skipId, buffer) => {
+_tools.judgeBatch = (aRange, bMaps, skipId, buffer) => {
     let [resultList, result] = [{}, false];
 
     let [i, mapL] = [0, bMaps.length];
@@ -52,7 +52,7 @@ _utils.judgeBatch = (aRange, bMaps, skipId, buffer) => {
             continue;
         }
 
-        let flag = _utils.judgeCore(aRange, mapItem, buffer);
+        let flag = _tools.judgeCore(aRange, mapItem, buffer);
         resultList[mapId] = flag;
 
         if (flag) {
@@ -67,7 +67,14 @@ _utils.judgeBatch = (aRange, bMaps, skipId, buffer) => {
     };
 };
 
-_utils.keepNoCollision = (maps, collisionBuffer = [0, 0], suggestBuffer = [0, 0]) => {
+/**
+ * 保证无碰撞
+ * @param  {Array} maps            Map集
+ * @param  {Array}  collisionBuffer 碰撞判断的buffer
+ * @param  {Array}  suggestBuffer   重新规划的无碰撞数据的Buffer
+ * @return {[type]}                 [description]
+ */
+_tools.keepNoCollision = (maps, collisionBuffer = [0, 0], suggestBuffer = [0, 0]) => {
     // 按y起点升序排列
     maps = maps.slice(0).sort((aMap, bMap) => {
         return aMap.y[0] > bMap.y[0] ? 1 : -1;
@@ -83,7 +90,7 @@ _utils.keepNoCollision = (maps, collisionBuffer = [0, 0], suggestBuffer = [0, 0]
             y: map.y.slice(0)
         };
 
-        let judgeResult = _utils.judgeBatch(map, maps, map.id, collisionBuffer);
+        let judgeResult = _tools.judgeBatch(map, maps, map.id, collisionBuffer);
         if (hasCollision = judgeResult.flag) {
             let resultList = judgeResult.list;
             
@@ -100,7 +107,7 @@ _utils.keepNoCollision = (maps, collisionBuffer = [0, 0], suggestBuffer = [0, 0]
     }
 
     if (hasCollision) {
-        return _utils.keepNoCollision(maps, collisionBuffer, suggestBuffer);
+        return _tools.keepNoCollision(maps, collisionBuffer, suggestBuffer);
     }
 
     return maps;
@@ -112,12 +119,12 @@ _utils.keepNoCollision = (maps, collisionBuffer = [0, 0], suggestBuffer = [0, 0]
  * @param  {[type]} activeMap [description]
  * @return {[type]}           [description]
  */
-_utils.getSuggest = (maps, activeMap, collisionBuffer = [0, 0], suggestBuffer = [0, 0]) => {
+_tools.getSuggest = (maps, activeMap, collisionBuffer = [0, 0], suggestBuffer = [0, 0]) => {
     maps = maps.slice(0);
     let resultMaps = [];
 
     // 先确保activeMap的位置没被占用
-    let judgeResult = _utils.judgeBatch(activeMap, maps, undefined, collisionBuffer);
+    let judgeResult = _tools.judgeBatch(activeMap, maps, undefined, collisionBuffer);
 
     if (judgeResult.flag) {
         let resultList = judgeResult.list;
@@ -137,7 +144,7 @@ _utils.getSuggest = (maps, activeMap, collisionBuffer = [0, 0], suggestBuffer = 
     }
 
     // 再保证其它节点不重叠
-    resultMaps = _utils.keepNoCollision(maps, collisionBuffer, suggestBuffer);
+    resultMaps = _tools.keepNoCollision(maps, collisionBuffer, suggestBuffer);
 
     return resultMaps;
 };
@@ -175,7 +182,9 @@ Collision.prototype.setSuggestBuffer = function(suggestBuffer = [0, 0]) {
   */
 Collision.prototype.setMain = function (id) {
     let pos = arrHasKey(this.map, 'id', id);
-    this.lead = id;
+    if (pos !== -1) {
+        this.lead = id;
+    }
 
     return this;
 };
@@ -185,7 +194,7 @@ Collision.prototype.setMain = function (id) {
  * @param  {[type]} myRange {x: [minX, maxX], y: [minY, maxY]}
  * @return {[type]}      [description]
  */
-Collision.prototype.judge = function (myRange) {
+Collision.prototype.judge = function (myRange, collisionBuffer) {
     let self = this;
 
     let result;
@@ -195,7 +204,7 @@ Collision.prototype.judge = function (myRange) {
             flag: false
         };
     }
-    result = _utils.judgeBatch(myRange, this.map, this.lead, [this.bufferX, this.bufferY]);
+    result = _tools.judgeBatch(myRange, this.map, this.lead, collisionBuffer || this.collisionBuffer);
 
     return result;
 };
@@ -248,7 +257,7 @@ Collision.prototype.getSuggestPos = function(judgeParam, collisionBuffer, sugges
         if (pos === -1) {
             return false;
         }
-        judgeParam = this.judge(this.map[pos]);
+        judgeParam = this.judge(this.map[pos], collisionBuffer);
     }
 
     if (!judgeParam.flag) {
@@ -272,7 +281,7 @@ Collision.prototype.getSuggestPos = function(judgeParam, collisionBuffer, sugges
 
     }
 
-    return _utils.getSuggest(mapCopy, activeMap, collisionBuffer || this.collisionBuffer, suggestBuffer || this.suggestBuffer);
+    return _tools.getSuggest(mapCopy, activeMap, collisionBuffer || this.collisionBuffer, suggestBuffer || this.suggestBuffer);
 };
 
 export default Collision;
